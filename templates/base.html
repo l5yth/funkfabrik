@@ -1,0 +1,49 @@
+{# Copyright (c) 2006-2026 afri & veit #}
+{# SPDX-License-Identifier: Apache-2.0 #}
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FUNKFABRIK*B — P{{ current_page }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div id="screen">
+
+  <header id="header">
+    <span id="station-name">FUNKFABRIK<span class="blink">*</span>B</span>
+    <span id="page-info">P{{ current_page }}&nbsp;&nbsp;{% block page_title %}{% endblock %}</span>
+    <span id="clock" aria-live="polite">00:00:00</span>
+  </header>
+
+  <nav id="nav">
+    <ul>
+      {% for page in pages %}
+      <li{% if page.num == current_page %} class="active"{% endif %}>
+        <a href="/{{ page.num }}" title="{{ page.title }}">{{ page.num }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+
+  <div id="viewport">
+    <div id="content-scroll">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <footer id="footer">
+    <span id="footer-hint">▲▼ SCROLLEN &nbsp; 0–9 SEITENAUSWAHL</span>
+    <span id="footer-brand">FUNKFABRIK<span class="blink">*</span>B</span>
+  </footer>
+
+</div>
+
+<!-- Remote control digit overlay -->
+<div id="remote" aria-live="assertive" aria-label="Seiteneingabe"></div>
+
+<script src="/static/teletext.js"></script>
+</body>
+</html>

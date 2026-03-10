@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block page_title %}IMPRESSUM{% endblock %}
+
+{% block content %}
+<h1>Impressum</h1>
+
+<h2>Angaben gemäß § 5 TMG</h2>
+<p>FUNKFABRIK*B<br>
+Musterstraße 1<br>
+12345 Musterstadt</p>
+
+<h2>Verantwortlich</h2>
+<p>Max Mustermann<br>
+<span class="color-cyan">hallo@funkfabrik-b.de</span></p>
+
+<h2>Rechtliches</h2>
+<ul>
+  <li><a href="/999/datenschutz">Datenschutzerklärung</a></li>
+  <li><a href="/999/lizenz">Lizenzhinweise</a></li>
+</ul>
+
+<hr>
+<p class="color-yellow">FUNKFABRIK*B — Freies Radio im Netz</p>
+<p class="color-white">Technik: Rust / Axum / Tera</p>
+{% endblock %}

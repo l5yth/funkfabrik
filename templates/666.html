@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block page_title %}KONTAKT{% endblock %}
+
+{% block content %}
+<h1>Kontakt</h1>
+
+<h2>Schreib uns</h2>
+
+<form method="post" action="/666/send">
+  <label for="name">Name</label>
+  <input type="text" id="name" name="name" placeholder="Dein Name" autocomplete="off">
+
+  <label for="email">E-Mail</label>
+  <input type="email" id="email" name="email" placeholder="deine@mail.de" autocomplete="off">
+
+  <label for="msg">Nachricht</label>
+  <textarea id="msg" name="message" rows="5" placeholder="Deine Nachricht..."></textarea>
+
+  <input type="submit" value="ABSENDEN">
+</form>
+
+<hr>
+<p class="color-cyan">Oder per Mail: <span class="color-white">hallo@funkfabrik-b.de</span></p>
+{% endblock %}

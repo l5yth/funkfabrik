@@ -1,0 +1,324 @@
+/* Copyright (c) 2006-2026 afri & veit */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+/* ============================================================
+   FUNKFABRIK*B — Teletext Stylesheet
+   Palette: authentic 1980s European teletext primaries
+   ============================================================ */
+
+:root {
+  --black:  #000000;
+  --white:  #FFFFFF;
+  --red:    #FC0204;
+  --green:  #04FE04;
+  --yellow: #FCFE04;
+  --cyan:   #04FEFC;
+  --blue:   #0402FC;
+}
+
+@font-face {
+  font-family: 'Teletext';
+  src: url('/static/fonts/AEnigma.woff') format('woff');
+  font-display: block;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Page ── */
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Teletext', 'Courier New', monospace;
+  font-size: 20px;
+  line-height: 1.4;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 0 60px;
+}
+
+/* ── Screen / outer frame ── */
+#screen {
+  width: 960px;
+  display: flex;
+  flex-direction: column;
+  border: 20px solid var(--blue);
+  background: var(--black);
+}
+
+/* ── Header ── */
+#header {
+  background: var(--blue);
+  padding: 4px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+#station-name {
+  color: var(--yellow);
+  font-size: 22px;
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+#page-info {
+  color: var(--cyan);
+  flex: 1;
+  text-align: center;
+  font-size: 18px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#clock {
+  color: var(--white);
+  font-size: 20px;
+  white-space: nowrap;
+  min-width: 9ch;
+  text-align: right;
+}
+
+/* ── Navigation ── */
+#nav {
+  background: var(--black);
+  padding: 6px 12px;
+  border-bottom: 4px solid var(--blue);
+}
+
+#nav ul {
+  list-style: none;
+  display: flex;
+  gap: 0;
+}
+
+#nav ul li a {
+  display: block;
+  padding: 2px 10px;
+  text-decoration: none;
+  font-size: 20px;
+}
+
+/* Cycling teletext colors: red / green / yellow / cyan */
+#nav ul li:nth-child(4n+1) a { color: var(--red); }
+#nav ul li:nth-child(4n+2) a { color: var(--green); }
+#nav ul li:nth-child(4n+3) a { color: var(--yellow); }
+#nav ul li:nth-child(4n+4) a { color: var(--cyan); }
+
+/* Active page: inverted */
+#nav ul li.active a {
+  background: var(--white);
+  color: var(--black) !important;
+}
+
+/* ── Content viewport ── */
+#viewport {
+  height: 440px;
+  overflow: hidden;
+  position: relative;
+  padding: 16px 20px 16px 20px;
+}
+
+#content-scroll {
+  position: relative;
+  will-change: transform;
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ── Typography ── */
+h1 {
+  color: var(--red);
+  border-bottom: 10px solid var(--red);
+  padding-bottom: 4px;
+  margin-bottom: 14px;
+  text-transform: uppercase;
+}
+
+h2 {
+  color: var(--yellow);
+  border-bottom: 6px solid var(--yellow);
+  padding-bottom: 2px;
+  margin: 16px 0 10px;
+  text-transform: uppercase;
+}
+
+h3 {
+  color: var(--cyan);
+  margin: 12px 0 8px;
+  text-transform: uppercase;
+}
+
+p {
+  margin-bottom: 10px;
+}
+
+a {
+  color: var(--white);
+  text-decoration: none;
+}
+
+a:hover, a:focus {
+  color: var(--yellow);
+  outline: none;
+}
+
+ul, ol {
+  list-style: square;
+  margin: 0 0 10px 28px;
+}
+
+ul li, ol li {
+  margin-bottom: 4px;
+}
+
+/* ── Forms ── */
+input[type="text"],
+input[type="email"],
+textarea,
+select {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Teletext', 'Courier New', monospace;
+  font-size: 18px;
+  border: 2px solid var(--green);
+  padding: 6px 8px;
+  outline: none;
+  width: 100%;
+  margin-bottom: 8px;
+  resize: vertical;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+textarea:focus {
+  border-color: var(--yellow);
+}
+
+label {
+  display: block;
+  color: var(--cyan);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+input[type="submit"],
+button {
+  background: var(--red);
+  color: var(--white);
+  font-family: 'Teletext', 'Courier New', monospace;
+  font-size: 18px;
+  border: none;
+  padding: 8px 20px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+input[type="submit"]:hover,
+button:hover {
+  background: var(--yellow);
+  color: var(--black);
+}
+
+/* ── Footer ── */
+#footer {
+  background: var(--blue);
+  padding: 4px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+#footer-hint {
+  color: var(--white);
+  font-size: 16px;
+}
+
+#footer-brand {
+  color: var(--yellow);
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+
+/* ── Remote control digit overlay ── */
+#remote {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  background: var(--black);
+  border: 3px solid var(--yellow);
+  color: var(--yellow);
+  font-family: 'Teletext', 'Courier New', monospace;
+  font-size: 48px;
+  padding: 10px 24px;
+  letter-spacing: 12px;
+  display: none;
+  z-index: 999;
+  min-width: 4ch;
+  text-align: center;
+}
+
+#remote.visible {
+  display: block;
+}
+
+/* ── Blink animation ── */
+.blink {
+  animation: blink-anim 1s step-end infinite;
+}
+
+@keyframes blink-anim {
+  0%, 100% { visibility: visible; }
+  50%       { visibility: hidden; }
+}
+
+/* ── Utility ── */
+.color-red    { color: var(--red); }
+.color-green  { color: var(--green); }
+.color-yellow { color: var(--yellow); }
+.color-cyan   { color: var(--cyan); }
+.color-white  { color: var(--white); }
+
+.bg-red    { background: var(--red);    color: var(--black); }
+.bg-green  { background: var(--green);  color: var(--black); }
+.bg-yellow { background: var(--yellow); color: var(--black); }
+.bg-cyan   { background: var(--cyan);   color: var(--black); }
+.bg-blue   { background: var(--blue);   color: var(--white); }
+
+hr {
+  border: none;
+  border-top: 4px solid var(--blue);
+  margin: 12px 0;
+}
+
+/* ── Page-link list (used in index pages) ── */
+.page-index {
+  list-style: none;
+  margin: 0;
+}
+
+.page-index li {
+  margin-bottom: 6px;
+}
+
+.page-index li a {
+  display: inline-block;
+}
+
+.page-index li a .pg-num {
+  display: inline-block;
+  min-width: 4ch;
+  color: var(--cyan);
+}
+
+.page-index li a .pg-title {
+  color: var(--white);
+}
+
+.page-index li a:hover .pg-title {
+  color: var(--yellow);
+}
