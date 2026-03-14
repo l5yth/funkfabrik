@@ -85,7 +85,10 @@ async fn page_handler(Path(page): Path<String>, State(state): State<AppState>) -
             .send()
             .await
         {
-            Ok(r) => r.text().await.unwrap_or_else(|_| "Wetterdaten nicht verfügbar".into()),
+            Ok(r) => r
+                .text()
+                .await
+                .unwrap_or_else(|_| "Wetterdaten nicht verfügbar".into()),
             Err(_) => "Wetterdaten nicht verfügbar".into(),
         };
         ctx.insert("weather", weather.trim());
@@ -103,7 +106,9 @@ async fn page_handler(Path(page): Path<String>, State(state): State<AppState>) -
 
         let mut seed = now_secs;
         let mut rng = move || -> u64 {
-            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            seed = seed
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             seed >> 33
         };
 
@@ -133,9 +138,7 @@ async fn page_handler(Path(page): Path<String>, State(state): State<AppState>) -
     Html(html)
 }
 
-async fn rss_proxy(
-    State(state): State<AppState>,
-) -> Result<(HeaderMap, String), StatusCode> {
+async fn rss_proxy(State(state): State<AppState>) -> Result<(HeaderMap, String), StatusCode> {
     let body = state
         .http
         .get("https://archiv.funkfabrik-b.de/rss")
@@ -147,6 +150,9 @@ async fn rss_proxy(
         .map_err(|_| StatusCode::BAD_GATEWAY)?;
 
     let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::from_static("application/rss+xml; charset=utf-8"));
+    headers.insert(
+        "Content-Type",
+        HeaderValue::from_static("application/rss+xml; charset=utf-8"),
+    );
     Ok((headers, body))
 }
