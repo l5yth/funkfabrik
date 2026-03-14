@@ -54,6 +54,12 @@ struct AppState {
     /// [`reqwest::Client`] is cheaply cloneable and manages a connection pool
     /// internally, so a single instance is shared for the lifetime of the server.
     http: reqwest::Client,
+    /// URL for the wttr.in current-conditions endpoint.  Stored here so tests
+    /// can substitute a local mock server without patching the binary.
+    weather_url: String,
+    /// URL for the podcast archive RSS feed.  Stored here so tests can
+    /// substitute a local mock server without patching the binary.
+    rss_url: String,
 }
 
 /// Entry point.  Compiles templates, builds the router, and starts the server.
@@ -63,6 +69,8 @@ async fn main() {
     let state = AppState {
         tera: Arc::new(tera),
         http: reqwest::Client::new(),
+        weather_url: "https://wttr.in/Berlin?format=2".into(),
+        rss_url: "https://archiv.funkfabrik-b.de/rss".into(),
     };
 
     let app = build_router(state);
@@ -87,10 +95,10 @@ fn build_router(state: AppState) -> Router {
 
 /// Renders a page by number.
 ///
-/// Looks up `page` in [`PAGES`] to find the human-readable title, builds a
-/// Tera [`Context`] with the variables every template expects, adds any
-/// page-specific context (e.g. live weather for page 170), and renders
-/// `{page}.html`.  Falls back to `404.html` if the template is not found.
+/// Validates `page` against [`PAGES`] before constructing the template name,
+/// so only known page numbers are ever passed to the renderer.  Unknown pages
+/// render `404.html` directly.  Falls back to an inline error string if even
+/// the 404 template fails.
 ///
 /// # Template context variables
 ///
@@ -107,45 +115,45 @@ async fn page_handler(Path(page): Path<String>, State(state): State<AppState>) -
         .map(|(num, title)| serde_json::json!({"num": num, "title": title}))
         .collect();
 
-    let page_title = page_title_for(&page);
-
     let mut ctx = Context::new();
     ctx.insert("current_page", &page);
-    ctx.insert("page_title", page_title);
+    ctx.insert("page_title", page_title_for(&page));
     ctx.insert("pages", &pages);
 
-    if page == "170" {
-        let weather: String = match state
-            .http
-            .get("https://wttr.in/Berlin?format=2")
-            .header("User-Agent", "curl/8.0")
-            .send()
-            .await
-        {
-            Ok(r) => r
-                .text()
+    // Only render a page template for known page numbers.  This prevents
+    // user-supplied path segments from being passed to Tera::render.
+    let template = if PAGES.iter().any(|(num, _)| *num == page) {
+        if page == "170" {
+            let weather: String = match state
+                .http
+                .get(&state.weather_url)
+                .header("User-Agent", "curl/8.0")
+                .send()
                 .await
-                .unwrap_or_else(|_| "Wetterdaten nicht verfügbar".into()),
-            Err(_) => "Wetterdaten nicht verfügbar".into(),
-        };
-        ctx.insert("weather", weather.trim());
+            {
+                Ok(r) => r
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Wetterdaten nicht verfügbar".into()),
+                Err(_) => "Wetterdaten nicht verfügbar".into(),
+            };
+            ctx.insert("weather", weather.trim());
 
-        let now_secs = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+            let now_secs = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            ctx.insert("forecast", &build_forecast(now_secs));
+        }
+        format!("{}.html", page)
+    } else {
+        "404.html".to_string()
+    };
 
-        ctx.insert("forecast", &build_forecast(now_secs));
-    }
-
-    let template = format!("{}.html", page);
-    let html = state.tera.render(&template, &ctx).unwrap_or_else(|_| {
-        ctx.insert("current_page", &page);
-        state
-            .tera
-            .render("404.html", &ctx)
-            .unwrap_or_else(|_| "<h1 style='color:#FC0204'>PAGE NOT FOUND</h1>".into())
-    });
+    let html = state
+        .tera
+        .render(&template, &ctx)
+        .unwrap_or_else(|_| "<h1 style='color:#FC0204'>PAGE NOT FOUND</h1>".into());
 
     Html(html)
 }
@@ -212,7 +220,7 @@ fn build_forecast(now_secs: u64) -> Vec<serde_json::Value> {
         .collect()
 }
 
-/// Proxies the podcast archive RSS feed from `archiv.funkfabrik-b.de`.
+/// Proxies the podcast archive RSS feed.
 ///
 /// Fetching the feed server-side avoids browser CORS restrictions that would
 /// otherwise block the client-side JavaScript from reading the response.
@@ -221,7 +229,7 @@ fn build_forecast(now_secs: u64) -> Vec<serde_json::Value> {
 async fn rss_proxy(State(state): State<AppState>) -> Result<(HeaderMap, String), StatusCode> {
     let body = state
         .http
-        .get("https://archiv.funkfabrik-b.de/rss")
+        .get(&state.rss_url)
         .send()
         .await
         .map_err(|_| StatusCode::BAD_GATEWAY)?
@@ -243,15 +251,23 @@ mod tests {
     use axum::{body::Body, http::Request};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+    use wiremock::{Mock, MockServer, ResponseTemplate, matchers::method};
 
     /// Build an app backed by the real templates for integration tests.
     fn test_app() -> Router {
+        test_app_with_urls("http://127.0.0.1:1/weather", "http://127.0.0.1:1/rss")
+    }
+
+    /// Build an app with explicit external URL overrides.
+    fn test_app_with_urls(weather_url: &str, rss_url: &str) -> Router {
         let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let pattern  = format!("{}/templates/**/*.html", manifest);
         let tera     = Tera::new(&pattern).expect("failed to parse templates");
         build_router(AppState {
             tera: Arc::new(tera),
             http: reqwest::Client::new(),
+            weather_url: weather_url.into(),
+            rss_url: rss_url.into(),
         })
     }
 
@@ -368,14 +384,27 @@ mod tests {
     #[tokio::test]
     async fn known_page_returns_200() {
         for (num, _) in PAGES {
-            // Skip 170: it makes an outbound HTTP call during rendering.
-            if *num == "170" { continue; }
             let resp = test_app()
                 .oneshot(Request::get(format!("/{}", num)).body(Body::empty()).unwrap())
                 .await
                 .unwrap();
             assert_eq!(resp.status(), StatusCode::OK, "page {num} should be 200");
         }
+    }
+
+    /// Page 170 should render successfully even when the weather API is
+    /// unreachable, falling back to the "Wetterdaten nicht verfügbar" string.
+    #[tokio::test]
+    async fn page_170_renders_with_fallback_weather() {
+        // 127.0.0.1:1 is guaranteed to refuse connections immediately.
+        let resp = test_app_with_urls("http://127.0.0.1:1/weather", "http://127.0.0.1:1/rss")
+            .oneshot(Request::get("/170").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_string(resp.into_body()).await;
+        assert!(body.contains("Wetterdaten nicht verfügbar"));
+        assert!(body.contains("Vorhersage"));
     }
 
     #[tokio::test]
@@ -386,7 +415,28 @@ mod tests {
             .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
         let body = body_string(resp.into_body()).await;
-        assert!(body.contains("404") || body.contains("nicht gefunden") || body.contains("PAGE NOT FOUND"));
+        assert!(body.contains("nicht gefunden") || body.contains("PAGE NOT FOUND"));
+    }
+
+    /// Path traversal attempts must not reach Tera::render; they should fall
+    /// through to the 404 template.
+    #[tokio::test]
+    async fn path_traversal_returns_404_template() {
+        for path in ["/../../etc/passwd", "/../secret", "/100%2F..%2Fetc"] {
+            let resp = test_app()
+                .oneshot(Request::get(path).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            // Either the router rejects it (non-200) or our handler serves 404.html.
+            let status = resp.status();
+            if status == StatusCode::OK {
+                let body = body_string(resp.into_body()).await;
+                assert!(
+                    body.contains("nicht gefunden") || body.contains("PAGE NOT FOUND"),
+                    "traversal path {path} should render 404 template, got: {body:.80}"
+                );
+            }
+        }
     }
 
     #[tokio::test]
@@ -416,5 +466,41 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    /// rss_proxy returns the feed body and the correct Content-Type on success.
+    #[tokio::test]
+    async fn rss_proxy_returns_content_type_on_success() {
+        let mock_server = MockServer::start().await;
+        Mock::given(method("GET"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_string("<rss><channel><title>Test</title></channel></rss>"),
+            )
+            .mount(&mock_server)
+            .await;
+
+        let resp = test_app_with_urls("http://127.0.0.1:1/weather", &mock_server.uri())
+            .oneshot(Request::get("/api/rss").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        assert_eq!(
+            resp.headers()["content-type"],
+            "application/rss+xml; charset=utf-8"
+        );
+        let body = body_string(resp.into_body()).await;
+        assert!(body.contains("<rss>"));
+    }
+
+    /// rss_proxy returns 502 when the upstream feed is unreachable.
+    #[tokio::test]
+    async fn rss_proxy_returns_502_when_upstream_unreachable() {
+        let resp = test_app_with_urls("http://127.0.0.1:1/weather", "http://127.0.0.1:1/rss")
+            .oneshot(Request::get("/api/rss").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_GATEWAY);
     }
 }
