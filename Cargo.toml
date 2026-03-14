@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 [package]
-name = "funkfabrik"
+name = "funkfabrik-b"
 version = "0.1.0"
 edition = "2024"
 
@@ -12,3 +12,4 @@ tokio = { version = "1", features = ["full"] }
 tera = "1"
 tower-http = { version = "0.6", features = ["fs"] }
 serde_json = "1"
+reqwest = { version = "0.12", features = ["rustls-tls"], default-features = false }

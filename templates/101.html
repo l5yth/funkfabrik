@@ -5,21 +5,116 @@
 {% block content %}
 <h1>Radio hören</h1>
 
-<h2>Livestream</h2>
-<p class="color-green">► Stream läuft — 128 kbps MP3</p>
-<p>[Hier kommt der eingebettete Player]</p>
+<h2>Re-LIVE</h2>
+<p id="podcast-info" class="color-yellow">Lade Archiv…</p>
+<audio id="podcast-player" controls style="width:100%"></audio>
+<button id="podcast-play" style="display:none;width:100%;margin-top:4px">▶ Abspielen</button>
 
 <h2>Empfangswege</h2>
 <ul>
-  <li class="color-yellow">Webplayer — diese Seite</li>
-  <li>VLC / Winamp — URL eintragen</li>
-  <li>DAB+ — Kanal 12C, Region Mitte</li>
-  <li>UKW — 99,9 MHz (lokal)</li>
+  <li class="color-yellow">Web player — diese Seite!</li>
+  <li>VLC/Winamp — URL eintragen: <span class="color-cyan">https://archiv.funkfabrik-b.de/rss</span></li>
+  <li>Punkrockers Radio im Internet: <a href="https://punkrockers-radio.de/">https://punkrockers-radio.de/</a></li>
+  <li>UKW auf Pi Radio: <span class="color-green">88,4 MHz (Berlin)</span></li>
 </ul>
-
-<h2>Stream-URL</h2>
-<p class="color-cyan">https://stream.funkfabrik-b.de/live.mp3</p>
 
 <hr>
 <p>Probleme? Kontakt auf <a href="/666">Seite 666</a>.</p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+
+  const player  = document.getElementById('podcast-player');
+  const info    = document.getElementById('podcast-info');
+  const playBtn = document.getElementById('podcast-play');
+
+  if (!player || !info) return;
+
+  let episodes = [];
+  let current  = 0;
+
+  function showInfo(ep) {
+    info.textContent = '► ' + ep.title;
+  }
+
+  function tryPlay() {
+    var promise = player.play();
+    if (promise !== undefined) {
+      promise.catch(function () {
+        playBtn.style.display = 'block';
+      });
+    }
+  }
+
+  function playEpisode(index, randomStart) {
+    current = ((index % episodes.length) + episodes.length) % episodes.length;
+    var ep = episodes[current];
+    player.src = ep.url;
+    player.load();
+    showInfo(ep);
+    playBtn.style.display = 'none';
+
+    if (randomStart) {
+      player.addEventListener('loadedmetadata', function onMeta() {
+        player.removeEventListener('loadedmetadata', onMeta);
+        if (player.duration && isFinite(player.duration)) {
+          player.currentTime = Math.random() * player.duration;
+          player.addEventListener('seeked', function onSeeked() {
+            player.removeEventListener('seeked', onSeeked);
+            tryPlay();
+          });
+        } else {
+          tryPlay();
+        }
+      });
+    } else {
+      player.addEventListener('canplay', function onReady() {
+        player.removeEventListener('canplay', onReady);
+        tryPlay();
+      });
+    }
+  }
+
+  player.addEventListener('ended', function () {
+    playEpisode(current + 1, false);
+  });
+
+  playBtn.addEventListener('click', function () {
+    playBtn.style.display = 'none';
+    player.play().catch(function () {
+      playBtn.style.display = 'block';
+    });
+  });
+
+  fetch('/api/rss')
+    .then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.text();
+    })
+    .then(function (xml) {
+      var doc   = new DOMParser().parseFromString(xml, 'text/xml');
+      var items = doc.querySelectorAll('item');
+
+      episodes = Array.from(items).map(function (item) {
+        var title     = (item.querySelector('title') || {}).textContent || 'Unbekannte Sendung';
+        var enclosure = item.querySelector('enclosure');
+        var url       = enclosure ? enclosure.getAttribute('url') : null;
+        return { title: title.trim(), url: url };
+      }).filter(function (ep) { return ep.url; });
+
+      if (episodes.length === 0) {
+        info.textContent = 'Keine Episoden im Feed gefunden.';
+        return;
+      }
+
+      playEpisode(Math.floor(Math.random() * episodes.length), true);
+    })
+    .catch(function (err) {
+      info.textContent = 'Archiv konnte nicht geladen werden. (' + err.message + ')';
+    });
+})();
+</script>
 {% endblock %}
