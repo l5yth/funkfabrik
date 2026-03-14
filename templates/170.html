@@ -5,19 +5,16 @@
 {% block content %}
 <h1>Wettermagazin</h1>
 
-<h2>Heute</h2>
-<p class="color-yellow">☁ Bewölkt, 14 °C, SW-Wind 20 km/h</p>
+<h2>Berlin — Aktuell</h2>
+<p class="color-yellow">{{ weather }}</p>
 
 <h2>Vorhersage</h2>
 <ul>
-  <li>Mo — <span class="color-cyan">☁ 14°C</span></li>
-  <li>Di — <span class="color-green">☀ 18°C</span></li>
-  <li>Mi — <span class="color-yellow">⛅ 16°C</span></li>
-  <li>Do — <span class="color-red">🌧 12°C</span></li>
-  <li>Fr — <span class="color-cyan">☁ 13°C</span></li>
+  {% for day in forecast %}
+  <li>{{ day.day }} — <span class="{{ day.color }}">{{ day.icon }} {{ day.temp }}°C, {{ day.wind }} km/h</span></li>
+  {% endfor %}
 </ul>
 
 <hr>
-<p class="color-white">Quelle: Wetterdienst-Platzhalter</p>
-<p class="color-cyan">[Hier kommt das Live-Wetter-Widget]</p>
+<p class="color-white">Quelle: <a href="https://wttr.in">wttr.in</a></p>
 {% endblock %}

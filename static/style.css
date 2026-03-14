@@ -25,6 +25,8 @@
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body { overflow: hidden; }
+
 /* ── Page ── */
 body {
   background: var(--black);
@@ -118,10 +120,15 @@ body {
 
 /* ── Content viewport ── */
 #viewport {
+  position: relative;
   height: 440px;
   overflow: hidden;
-  position: relative;
-  padding: 16px 20px 16px 20px;
+  padding: 16px 20px;
+  scrollbar-width: none;
+}
+
+#viewport::-webkit-scrollbar {
+  display: none;
 }
 
 #content-scroll {
