@@ -120,15 +120,15 @@ body {
 
 /* ── Content viewport ── */
 #viewport {
+  position: relative;
   height: 440px;
   overflow: hidden;
+  padding: 16px 20px;
   scrollbar-width: none;
 }
 
 #viewport::-webkit-scrollbar {
   display: none;
-  position: relative;
-  padding: 16px 20px 16px 20px;
 }
 
 #content-scroll {
